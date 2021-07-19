@@ -13,6 +13,8 @@ using UnityEngine.UI;
 
 namespace Nekoyume.UI.Module
 {
+    using Coffee.UIEffects;
+    using Nekoyume.Game.ScriptableObject;
     using UniRx;
 
     public class ItemView<TViewModel> : VanillaItemView
@@ -27,13 +29,10 @@ namespace Nekoyume.UI.Module
         public Image dimmedImage;
 
         [SerializeField]
-        protected GameObject optionTagObject = null;
+        protected UIHsvModifier optionTagBg = null;
 
         [SerializeField]
         protected TextMeshProUGUI optionTagText = null;
-
-        [SerializeField]
-        protected Image optionTagBgImage = null;
 
         private readonly List<IDisposable> _disposablesAtSetData = new List<IDisposable>();
 
@@ -115,7 +114,7 @@ namespace Nekoyume.UI.Module
             Model.EnhancementEffectEnabled
                 .Subscribe(x => enhancementImage.gameObject.SetActive(x))
                 .AddTo(_disposablesAtSetData);
-            Model.Options.Subscribe(SetOptionTag).AddTo(_disposablesAtSetData);
+            Model.Options.Subscribe(count => SetOptionTag(count, data)).AddTo(_disposablesAtSetData);
             Model.Dimmed.Subscribe(SetDim).AddTo(_disposablesAtSetData);
             if (dimmedImage != null)
             {
@@ -157,6 +156,8 @@ namespace Nekoyume.UI.Module
                 throw new ArgumentOutOfRangeException(nameof(ItemSheet.Row), model.ItemBase.Value.Id, null);
             }
             base.SetData(row);
+
+            var data = itemViewData.GetItemViewData(row.Grade);
             _disposablesAtSetData.DisposeAllAndClear();
             Model = model;
             Model.GradeEnabled.SubscribeTo(gradeImage).AddTo(_disposablesAtSetData);
@@ -165,7 +166,7 @@ namespace Nekoyume.UI.Module
             Model.EnhancementEffectEnabled
                 .Subscribe(x => enhancementImage.gameObject.SetActive(x))
                 .AddTo(_disposablesAtSetData);
-            Model.Options.Subscribe(SetOptionTag).AddTo(_disposablesAtSetData);
+            Model.Options.Subscribe(count => SetOptionTag(count, data)).AddTo(_disposablesAtSetData);
             Model.Dimmed.Subscribe(SetDim).AddTo(_disposablesAtSetData);
             if (dimmedImage != null)
             {
@@ -210,13 +211,13 @@ namespace Nekoyume.UI.Module
                     selectionImage.enabled = false;
                 }
 
-                optionTagObject.SetActive(false);
+                optionTagBg.gameObject.SetActive(false);
             }
         }
 
-        protected void SetOptionTag(int count)
+        protected void SetOptionTag(int count, ItemViewData itemViewData)
         {
-            optionTagObject.SetActive(false);
+            optionTagBg.gameObject.SetActive(false);
             if (Model is null)
             {
                 return;
@@ -225,9 +226,12 @@ namespace Nekoyume.UI.Module
             var itemBase = Model.ItemBase.Value;
             if (itemBase.TryGetOptionTagText(out var text))
             {
-                optionTagBgImage.color = Model.ItemBase.Value.GetItemGradeColor();
+                optionTagBg.range = itemViewData.GradeHsvRange;
+                optionTagBg.hue = itemViewData.GradeHsvHue;
+                optionTagBg.saturation = itemViewData.GradeHsvSaturation;
+                optionTagBg.value = itemViewData.GradeHsvValue;
                 optionTagText.text = text;
-                optionTagObject.SetActive(true);
+                optionTagBg.gameObject.SetActive(true);
             }
         }
     }
